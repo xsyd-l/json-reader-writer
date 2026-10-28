@@ -57,9 +57,73 @@ impl Json {
         Json::Null
     }
 
-    fn json_array_split(s: &str) -> Vec<String> {
-        let mut result: Vec<String> = Vec::new();
+    fn json_array_split(s: &str) -> Vec<&str> {
+        let mut result: Vec<&str> = Vec::new();
+        let s = s.trim();
         if let Some(inner) = s.strip_prefix('[').and_then(|s| s.strip_suffix(']')) {
+            let mut stack = Vec::<u8>::new();
+            let mut index = 0;
+            let mut prev = 0;
+            let mut is_escaped = false;
+            for b in inner.bytes() {
+                if is_escaped {
+                    is_escaped = false;
+                    index += 1;
+                    continue;
+                }
+               
+                match b {
+                    b'\\' => {
+                        is_escaped = true;
+                    },
+                    b'[' | b'{' | b'\"' => {
+                        if let Some(top) = stack.last() {
+                            if top != &b'\"' {
+                                stack.push(b);
+                            } else if b == b'\"' {
+                                stack.pop();
+                            }
+                        } else {
+                            stack.push(b);
+                        }
+                    },
+                    b']' => {
+                        if let Some(top) = stack.last() {
+                            if top == &b'[' {
+                                stack.pop();
+                            }
+                        }
+                    },
+                    b'}' => {
+                        if let Some(top) = stack.last() {
+                            if top == &b'{' {
+                                stack.pop();
+                            }
+                        }
+                    },
+                    b',' => {
+                        if stack.is_empty() {
+                            result.push(&inner[prev..index].trim());
+                            prev = index + 1;
+                        } else {
+                        }
+                    }
+                    _ => {
+                    },
+                }
+                index += 1;
+            }
+            if !&s[prev..index].trim().is_empty() {
+                result.push(&inner[prev..index].trim());
+            }
+        }
+        result
+    }
+
+    fn json_object_split_to_string(s: &str) -> Vec<String> {
+        let mut result: Vec<String> = Vec::new();
+        let s = s.trim();
+        if let Some(inner) = s.strip_prefix('{').and_then(|s| s.strip_suffix('}')) {
             let mut stack = Vec::<char>::new();
             let mut string = String::new();
             let mut is_escaped = false;
@@ -106,7 +170,8 @@ impl Json {
                     },
                     ',' => {
                         if stack.is_empty() {
-                            result.push(std::mem::take(&mut string));
+                            result.push(String::from(string.trim()));
+                            string.clear();
                         } else {
                             string.push(',');
                         }
@@ -116,18 +181,14 @@ impl Json {
                     },
                 }
             }
-            if !string.is_empty() {
-                string.trim();
-                result.push(std::mem::take(&mut string));
+            if !string.trim().is_empty() {
+                result.push(String::from(string.trim()));
             }
         }
         result
     }
 
-    fn json_object_split(s: &str) -> Vec<&str> {
-        if let Some(inner) = s.strip_prefix('{').and_then(|s| s.strip_suffix('}')) {
+    fn pair_split(s: &str) -> (&str, &str) {
 
-        }
-        Vec::new()
     }
 }
