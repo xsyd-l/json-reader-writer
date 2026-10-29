@@ -41,14 +41,14 @@ impl Json {
         s == "null"
     }
     
-    pub fn from(s: &str) -> Json {
+    pub fn from_string(s: &str) -> Json {
         if Self::is_object(s) {
             let parts = Self::json_object_split(s);
             let mut map = HashMap::<String, Json>::new();
             for part in parts {
                 let (left, right) = Self::pair_split(part);
                 if let Some(left_inner) = left.strip_prefix('\"').and_then(|s|s.strip_suffix('\"')) {
-                    map.insert(String::from(left_inner), Self::from(right));
+                    map.insert(String::from(left_inner), Self::from_string(right));
                 }
             }
             return Json::Object(map);
@@ -56,7 +56,7 @@ impl Json {
             let parts = Self::json_array_split(s);
             let mut vec = Vec::<Json>::new();
             for part in parts {
-                vec.push(Self::from(part));
+                vec.push(Self::from_string(part));
             }
             return Json::Array(vec);
         } else if Self::is_float(s) {
