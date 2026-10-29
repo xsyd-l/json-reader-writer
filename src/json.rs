@@ -13,42 +13,15 @@ pub enum Json {
 }
 
 impl Json {
-    fn is_object(s: &str) -> bool {
-        s.starts_with('{')
-    }
-
-    fn is_array(s: &str) -> bool {
-        s.starts_with('[')
-    }
-
-    fn is_float(s: &str) -> bool {
-        s.parse::<f32>().is_ok() && s.contains('.')
-    }
-
-    fn is_int(s: &str) -> bool {
-        s.parse::<i32>().is_ok()
-    }
-
-    fn is_string(s: &str) -> bool {
-        s.starts_with('\"')
-    }
-
-    fn is_bool(s: &str) -> bool {
-        s == "true" || s == "false"
-    }
-
-    fn is_null(s: &str) -> bool {
-        s == "null"
-    }
     
-    pub fn from_string(s: &str) -> Json {
+    pub fn from(s: &str) -> Json {
         if Self::is_object(s) {
             let parts = Self::json_object_split(s);
             let mut map = HashMap::<String, Json>::new();
             for part in parts {
                 let (left, right) = Self::pair_split(part);
                 if let Some(left_inner) = left.strip_prefix('\"').and_then(|s|s.strip_suffix('\"')) {
-                    map.insert(String::from(left_inner), Self::from_string(right));
+                    map.insert(String::from(left_inner), Self::from(right));
                 }
             }
             return Json::Object(map);
@@ -56,7 +29,7 @@ impl Json {
             let parts = Self::json_array_split(s);
             let mut vec = Vec::<Json>::new();
             for part in parts {
-                vec.push(Self::from_string(part));
+                vec.push(Self::from(part));
             }
             return Json::Array(vec);
         } else if Self::is_float(s) {
@@ -94,8 +67,44 @@ impl Json {
         Self::js_to_string(self, 0)
     }
 
-    pub fn write() {
+    pub fn read(path: &str) -> Json {
+        if let Ok(content) = std::fs::read_to_string(path) {
+            return Json::from(&content); 
+        } else {
+            return Json::Null;
+        }   
+    }
 
+    pub fn write(&self, path: &str) -> Result<(), std::io::Error> {
+        std::fs::write(path, self.to_string())
+    }
+
+    fn is_object(s: &str) -> bool {
+        s.starts_with('{')
+    }
+
+    fn is_array(s: &str) -> bool {
+        s.starts_with('[')
+    }
+
+    fn is_float(s: &str) -> bool {
+        s.parse::<f32>().is_ok() && s.contains('.')
+    }
+
+    fn is_int(s: &str) -> bool {
+        s.parse::<i32>().is_ok()
+    }
+
+    fn is_string(s: &str) -> bool {
+        s.starts_with('\"')
+    }
+
+    fn is_bool(s: &str) -> bool {
+        s == "true" || s == "false"
+    }
+
+    fn is_null(s: &str) -> bool {
+        s == "null"
     }
 
     fn js_to_string(js: &Json, deep: u8) -> String {
