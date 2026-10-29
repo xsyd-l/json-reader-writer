@@ -1,12 +1,14 @@
 use std::io;
+use std::fmt::{self, Write};
 use std::collections::HashMap;
 
-enum Json {
+pub enum Json {
     Object(HashMap<String, Json>),
     Array(Vec<Json>),
     Float(f32),
     Int(i32),
     String(String),
+    Bool(bool),
     Null,
 }
 
@@ -31,15 +33,32 @@ impl Json {
         s.starts_with('\"')
     }
 
+    fn is_bool(s: &str) -> bool {
+        s == "true" || s == "false"
+    }
+
     fn is_null(s: &str) -> bool {
         s == "null"
     }
     
-    fn from(s: &str) -> Json {
+    pub fn from(s: &str) -> Json {
         if Self::is_object(s) {
-
+            let parts = Self::json_object_split(s);
+            let mut map = HashMap::<String, Json>::new();
+            for part in parts {
+                let (left, right) = Self::pair_split(part);
+                if let Some(left_inner) = left.strip_prefix('\"').and_then(|s|s.strip_suffix('\"')) {
+                    map.insert(String::from(left_inner), Self::from(right));
+                }
+            }
+            return Json::Object(map);
         } else if Self::is_array(s) {
-
+            let parts = Self::json_array_split(s);
+            let mut vec = Vec::<Json>::new();
+            for part in parts {
+                vec.push(Self::from(part));
+            }
+            return Json::Array(vec);
         } else if Self::is_float(s) {
             return Json::Float(s.parse::<f32>().unwrap());
         } else if Self::is_int(s) {
@@ -49,19 +68,116 @@ impl Json {
                 return Json::String(String::from(""));
             }
             if let Some(inner) = s.strip_prefix('\"').and_then(|s| s.strip_suffix('\"')) {
-                return Json::String(String::from(inner));
+                let mut restr = String::new();
+                let mut is_escaped = false;
+                for c in inner.chars() {
+                    if is_escaped {
+                        is_escaped = false;
+                    }
+                    if c == '\\' {
+                        is_escaped = true;
+                        continue;
+                    }
+                    restr.push(c);
+                }
+                return Json::String(restr);
             }
+        } else if Self::is_bool(s) {
+            return Json::Bool(s == "true");
         } else if Self::is_null(s) {
             return Json::Null;
         }
         Json::Null
     }
 
+    pub fn to_string(&self) ->String {
+        Self::js_to_string(self, 0)
+    }
+
+    pub fn write() {
+
+    }
+
+    fn js_to_string(js: &Json, deep: u8) -> String {
+        match js {
+            Json::Object(map) => {
+                let mut result = String::from("{\n");
+                let mut number = 0;
+                for (k, v) in map.iter() {
+                    let mut key: String = k.to_string().escape_default().collect();
+                    key.push('\"');
+                    key.insert(0, '\"');
+                    write!(result, "{}{}:{},\n", &(" ".repeat((deep * 4 + 4) as usize)), key, &Self::js_to_string(v, deep + 1)).unwrap();
+                    number += 1;
+                }
+                if number != 0 {
+                    result.pop();
+                    result.pop();
+                    write!(result, "\n{}}}", &(" ".repeat((deep * 4) as usize))).unwrap();
+                    return result;
+                } else {
+                    return String::from("{}");
+                }
+            },
+            Json::Array(array) => {
+                let mut number = 0;
+                let mut oora = 0;
+                for v in array.iter() {
+                    match v {
+                        Json::Array(_) | Json::Object(_) => {
+                            oora += 1;
+                        },
+                        _ => {
+
+                        }
+                    }
+                }
+                let mut result = if oora == 0 {String::from("[")} else {String::from("[\n")};
+                let end = if oora == 0 {","} else {",\n"};
+                let space = if oora == 0 {String::new()} else {(" ".repeat((deep * 4 + 4) as usize))};
+                for v in array.iter() {
+                    write!(result, "{}{}{}", &space, &Self::js_to_string(v, deep + 1), end).unwrap();
+                    number += 1;
+                }
+                if number == 0 {
+                    return String::from("[]");
+                }
+                if oora != 0 {
+                    result.pop();
+                    result.pop();
+                    write!(result, "\n{}]", &(" ".repeat((deep * 4) as usize))).unwrap();
+                    return result;
+                } else {
+                    result.pop();
+                    return result + "]";
+                }
+            },
+            Json::Float(value) => {
+                return value.to_string();
+            },
+            Json::Int(value) => {
+                return value.to_string();
+            },
+            Json::String(value) => {
+                let mut result: String = value.to_string().escape_default().collect();
+                result.push('\"');
+                result.insert(0, '\"');
+                return result;
+            },
+            Json::Bool(value) => {
+                return value.to_string();
+            },
+            Json::Null => {
+                return String::from("null");
+            }
+        }
+    }
+
     fn json_array_split(s: &str) -> Vec<&str> {
         let mut result: Vec<&str> = Vec::new();
         let s = s.trim();
         if let Some(inner) = s.strip_prefix('[').and_then(|s| s.strip_suffix(']')) {
-            return Self::json_split_by(s, ',');
+            return Self::json_split_by(inner, ',');
         } else {
             return Vec::new();
         }
@@ -71,7 +187,7 @@ impl Json {
         let mut result: Vec<&str> = Vec::new();
         let s = s.trim();
         if let Some(inner) = s.strip_prefix('{').and_then(|s| s.strip_suffix('}')) {
-            return Self::json_split_by(s, ',');
+            return Self::json_split_by(inner, ',');
         } else {
             return Vec::new();
         }

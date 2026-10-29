@@ -1,0 +1,39 @@
+{
+  "id": 1024,
+  "name": "Alice",
+  "active": true,
+  "score": 98.5,
+  "nickname": null,
+  "tags": ["rust", "json", "parser"],
+  "address": {
+    "city": "Shanghai",
+    "zip": "200000",
+    "geo": {
+      "lat": 31.2304,
+      "lng": 121.4737
+    }
+  },
+  "orders": [
+    {
+      "order_id": "A-001",
+      "items": [
+        { "sku": "X1", "qty": 2, "price": 19.9 },
+        { "sku": "Y2", "qty": 1, "price": 5.0 }
+      ],
+      "paid": true
+    },
+    {
+      "order_id": "A-002",
+      "items": [],
+      "paid": false
+    }
+  ],
+  "meta": {
+    "created_at": "2026-10-28T10:00:00Z",
+    "note": "contains , and { } and [ ] and \"quotes\"",
+    "nested_empty": {
+      "arr": [],
+      "obj": {}
+    }
+  }
+}
