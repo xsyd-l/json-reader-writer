@@ -1,6 +1,5 @@
-use std::io;
-use std::fmt::{self, Write};
 use std::collections::HashMap;
+use std::fmt::Write;
 
 pub enum Json {
     Object(HashMap<String, Json>),
@@ -13,14 +12,14 @@ pub enum Json {
 }
 
 impl Json {
-    
     pub fn from(s: &str) -> Json {
         if Self::is_object(s) {
             let parts = Self::json_object_split(s);
             let mut map = HashMap::<String, Json>::new();
             for part in parts {
                 let (left, right) = Self::pair_split(part);
-                if let Some(left_inner) = left.strip_prefix('\"').and_then(|s|s.strip_suffix('\"')) {
+                if let Some(left_inner) = left.strip_prefix('\"').and_then(|s| s.strip_suffix('\"'))
+                {
                     map.insert(String::from(left_inner), Self::from(right));
                 }
             }
@@ -63,16 +62,16 @@ impl Json {
         Json::Null
     }
 
-    pub fn to_string(&self) ->String {
+    pub fn to_string(&self) -> String {
         Self::js_to_string(self, 0)
     }
 
     pub fn read(path: &str) -> Json {
         if let Ok(content) = std::fs::read_to_string(path) {
-            return Json::from(&content); 
+            Json::from(&content)
         } else {
-            return Json::Null;
-        }   
+            Json::Null
+        }
     }
 
     pub fn write(&self, path: &str) -> Result<(), std::io::Error> {
@@ -116,18 +115,25 @@ impl Json {
                     let mut key: String = k.to_string().escape_default().collect();
                     key.push('\"');
                     key.insert(0, '\"');
-                    write!(result, "{}{}:{},\n", &(" ".repeat((deep * 4 + 4) as usize)), key, &Self::js_to_string(v, deep + 1)).unwrap();
+                    writeln!(
+                        result,
+                        "{}{}:{},",
+                        &(" ".repeat((deep * 4 + 4) as usize)),
+                        key,
+                        &Self::js_to_string(v, deep + 1)
+                    )
+                    .unwrap();
                     number += 1;
                 }
                 if number != 0 {
                     result.pop();
                     result.pop();
                     write!(result, "\n{}}}", &(" ".repeat((deep * 4) as usize))).unwrap();
-                    return result;
+                    result
                 } else {
-                    return String::from("{}");
+                    String::from("{}")
                 }
-            },
+            }
             Json::Array(array) => {
                 let mut number = 0;
                 let mut oora = 0;
@@ -135,17 +141,30 @@ impl Json {
                     match v {
                         Json::Array(_) | Json::Object(_) => {
                             oora += 1;
-                        },
-                        _ => {
-
                         }
+                        _ => {}
                     }
                 }
-                let mut result = if oora == 0 {String::from("[")} else {String::from("[\n")};
-                let end = if oora == 0 {","} else {",\n"};
-                let space = if oora == 0 {String::new()} else {(" ".repeat((deep * 4 + 4) as usize))};
+                let mut result = if oora == 0 {
+                    String::from("[")
+                } else {
+                    String::from("[\n")
+                };
+                let end = if oora == 0 { "," } else { ",\n" };
+                let space = if oora == 0 {
+                    String::new()
+                } else {
+                    " ".repeat((deep * 4 + 4) as usize) 
+                };
                 for v in array.iter() {
-                    write!(result, "{}{}{}", &space, &Self::js_to_string(v, deep + 1), end).unwrap();
+                    write!(
+                        result,
+                        "{}{}{}",
+                        &space,
+                        &Self::js_to_string(v, deep + 1),
+                        end
+                    )
+                    .unwrap();
                     number += 1;
                 }
                 if number == 0 {
@@ -155,56 +174,56 @@ impl Json {
                     result.pop();
                     result.pop();
                     write!(result, "\n{}]", &(" ".repeat((deep * 4) as usize))).unwrap();
-                    return result;
+                    result
                 } else {
                     result.pop();
-                    return result + "]";
+                    result + "]"
                 }
-            },
+            }
             Json::Float(value) => {
-                return value.to_string();
-            },
+                value.to_string()
+            }
             Json::Int(value) => {
-                return value.to_string();
-            },
+                value.to_string()
+            }
             Json::String(value) => {
                 let mut result: String = value.to_string().escape_default().collect();
                 result.push('\"');
                 result.insert(0, '\"');
-                return result;
-            },
+                result
+            }
             Json::Bool(value) => {
-                return value.to_string();
-            },
+                value.to_string()
+            }
             Json::Null => {
-                return String::from("null");
+                String::from("null")
             }
         }
     }
 
     fn json_array_split(s: &str) -> Vec<&str> {
-        let mut result: Vec<&str> = Vec::new();
+        let _result: Vec<&str> = Vec::new();
         let s = s.trim();
         if let Some(inner) = s.strip_prefix('[').and_then(|s| s.strip_suffix(']')) {
-            return Self::json_split_by(inner, ',');
+            Self::json_split_by(inner, ',')
         } else {
-            return Vec::new();
+            Vec::new()
         }
     }
 
     fn json_object_split(s: &str) -> Vec<&str> {
-        let mut result: Vec<&str> = Vec::new();
+        let _result: Vec<&str> = Vec::new();
         let s = s.trim();
         if let Some(inner) = s.strip_prefix('{').and_then(|s| s.strip_suffix('}')) {
-            return Self::json_split_by(inner, ',');
+            Self::json_split_by(inner, ',')
         } else {
-            return Vec::new();
+            Vec::new()
         }
     }
 
     fn pair_split(s: &str) -> (&str, &str) {
         let pair = Self::json_split_by(s, ':');
-        return (pair[0], pair[1]);
+        (pair[0], pair[1])
     }
 
     // !!! cannot asign c as [\]\{\}\"
@@ -221,11 +240,11 @@ impl Json {
                 index += 1;
                 continue;
             }
-           
+
             match b {
                 b'\\' => {
                     is_escaped = true;
-                },
+                }
                 b'[' | b'{' | b'\"' => {
                     if let Some(top) = stack.last() {
                         if top != &b'\"' {
@@ -236,32 +255,30 @@ impl Json {
                     } else {
                         stack.push(b);
                     }
-                },
+                }
                 b']' => {
-                    if let Some(top) = stack.last() {
-                        if top == &b'[' {
+                    if let Some(top) = stack.last()
+                        && top == &b'[' {
                             stack.pop();
                         }
-                    }
-                },
+                }
                 b'}' => {
-                    if let Some(top) = stack.last() {
-                        if top == &b'{' {
+                    if let Some(top) = stack.last()
+                        && top == &b'{' {
                             stack.pop();
                         }
-                    }
-                },
+                }
                 _ => {
-                    if b == c as u8 && stack.is_empty(){
-                        result.push(&inner[prev..index].trim());
+                    if b == c as u8 && stack.is_empty() {
+                        result.push(inner[prev..index].trim());
                         prev = index + 1;
                     }
-                },
+                }
             }
             index += 1;
         }
         if !&inner[prev..index].trim().is_empty() {
-            result.push(&inner[prev..index].trim());
+            result.push(inner[prev..index].trim());
         }
         result
     }
