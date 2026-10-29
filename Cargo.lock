@@ -3,5 +3,5 @@
 version = 4
 
 [[package]]
-name = "xsyd-json"
-version = "0.1.0"
+name = "xsyd_json"
+version = "0.1.2"
