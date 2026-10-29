@@ -1,5 +1,5 @@
 [package]
-name = "xsyd_json"
+name = "xsyd-json"
 version = "0.1.2"
 edition = "2024"
 license = "MIT"
